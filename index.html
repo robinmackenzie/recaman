@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Recamán visualisation</title>
+  <style>
+  body {
+    font: 15px arial, sans-serif;
+  }
+  .zoom {
+    cursor: move;
+    fill: none;
+    pointer-events: all;
+  }
+</style>
+</head>
+
+<body>
+  <div id="options">
+    <label for="iterations">Recamán iterations:</label> <input type="text" id="iterations" value="400">
+      <label>
+        Use color scale
+        <input type="radio" id="scales" name="coloring-option" checked>
+        <select id="scale-option">
+          <option>interpolatePlasma</option>
+          <option>interpolateInferno</option>
+          <option>interpolateWarm</option>
+          <option>interpolateCool</option>
+          <option>interpolateRainbow</option>
+        </select>    
+      </label>
+      <label>
+        Highlight primes
+        <input type="radio" id="primes" name="coloring-option">    
+      </label>
+    <button id="run">Run viz</button>
+  </div>
+  <div id="viz">
+  </div>
+
+  <!-- js -->
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script>
+    // tweaking from:
+    // axes - https://www.tutorialsteacher.com/d3js/axes-in-d3
+    // recaman - https://oeis.org/A005132
+    // arc function - https://observablehq.com/@d3/arc-diagram
+    // zoom - https://bl.ocks.org/rutgerhofste/5bd5b06f7817f0ff3ba1daa64dee629d
+    // eratosthenes - https://www.craigrodrigues.com/blog/the-sieve-of-eratosthenes-in-javascript
+    // color scales - https://bl.ocks.org/pstuffa/d5934843ee3a7d2cc8406de64e6e4ea5
+
+    document.getElementById("run")
+      .addEventListener("click", () => {
+        // clear viz
+        document.getElementById("viz").innerHTML = "";
+        // get options
+        options = {}
+        let i = document.getElementById("iterations").value;
+        options["iterations"] = isPositiveInteger(i) ? parseInt(i) : 400;
+        let o = document.querySelector("input[name='coloring-option']:checked").id;
+        let s = document.getElementById("scale-option").value;
+        switch(o) {
+          case "primes":
+            options["colorPrimes"] = true;
+            options["scaleOption"] = null;
+            break;
+          case "scales":
+            options["colorPrimes"] = null;
+            options["scaleOption"] = s;
+            break;
+          default:
+            options["colorPrimes"] = true;
+            options["scaleOption"] = null;
+        }
+        // run viz
+        runRecaman(options);
+      });
+    
+    function runRecaman(options) {
+
+      let a = recaman(options["iterations"]);
+      console.log(`Computed Recamán sequence for ${options["iterations"]} iterations`);
+      let a_max = Math.max(...a);
+      let p = eratosthenes(a_max);
+      console.log(`Computed primes upto ${a_max}`);
+
+      // append svg
+      let svgWidth = 800;
+      let svgHeight = 600;
+      let margin = {"top": 20, "right": 20, "bottom": 20, "left": 60}
+      let width = svgWidth - margin.left - margin.right;
+      let height = svgHeight - margin.top - margin.bottom;
+      let svg = d3.select("#viz")
+        .append("svg")
+        .attr("width", svgWidth)
+        .attr("height", svgHeight);
+
+      // scales
+      let x_scale = d3.scaleLinear()
+        .domain([d3.min(a), d3.max(a)])
+        .range([0, width]);
+
+      let y_scale = d3.scaleLinear()
+        .domain([(a.length * -1), a.length])
+        .range([height, 0]);
+
+      // axes
+      let x_axis = d3.axisBottom(x_scale);
+      let y_axis = d3.axisLeft(y_scale);
+
+      // zoom
+      let zoom = d3.zoom()
+        .on("zoom", zoomFunction);
+      
+      let zoomableSpace = svg.append("g")
+        .attr("class", "zoomable_space")
+        .attr("transform", `translate(${margin.left},${margin.top})`)
+        .call(zoom);
+
+      // render semi- circles
+      function arc(x1, x2) {
+        return `M${x1},0 A1,1 1,0,1 ${x2},0`;
+      }
+
+      let hops = zoomableSpace.append("g");
+      let colorScale = options["colorPrimes"] ? null : d3.scaleSequential(d3[options["scaleOption"]]).domain([0, a.length]);
+
+      for (let i=0; i<a.length - 1; i++) {
+        let [x1, x2] = [a[i], a[i+1]];
+        hops.append("g")
+          .append("path")
+          .attr("d", arc(x_scale(x1), x_scale(x2)))
+          .attr("fill", "none")
+          // .attr("stroke", p.indexOf(x2) > -1 ? "red" : "blue")
+          // .attr("stroke", colorScale(i))
+          .attr("stroke", options["colorPrimes"] ? (p.indexOf(x2) > -1 ? "red" : "blue") : colorScale(i))
+          .attr("stroke-width", "0.8")
+          .style("vector-effect", "non-scaling-stroke")
+          .attr("transform", `translate(0,${height / 2})`)
+      }
+
+      // draw axes
+      let gX = zoomableSpace.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", `translate(0,${height / 2})`)
+        .call(x_axis);
+
+      let gY = zoomableSpace.append("g")
+        .attr("class", "axis axis--y")
+        .call(y_axis);
+
+      // append zoom area
+      let view = zoomableSpace.append("rect")
+        .attr("class", "zoom")
+        .attr("width", width)
+        .attr("height", height)
+        .call(zoom);
+
+      function zoomFunction() {
+        // create new scale ojects based on event
+        var new_x_scale = d3.event.transform.rescaleX(x_scale)
+        var new_y_scale = d3.event.transform.rescaleY(y_scale)
+        // console.log(d3.event.transform)
+
+        // update axes
+        gX.call(x_axis.scale(new_x_scale));
+        gY.call(y_axis.scale(new_y_scale));
+
+        // update recaman hops
+        hops.attr("transform", d3.event.transform)
+      }
+
+    }
+
+    // maths functions
+    function recaman(iterations) {
+      let sequence = [];
+      let index = 0;
+      for (let n=1; n<=iterations; n++) {
+        sequence.push(index);
+        let candidate = index - n;
+        (candidate >= 0 & sequence.indexOf(candidate) < 0) ? index = candidate : index += n;
+      }
+      return sequence;
+    }
+
+    function eratosthenes(n) {
+      let sieve = new Array(n).fill(1);
+      let limit = Math.sqrt(n);
+      for (let i=2; i<limit; i++) {
+        if(sieve[i]) {
+          for (let j=Math.pow(i, 2); j <n; j+=i) {
+            sieve[j] = 0;
+          }
+        }
+      }
+      return sieve.reduce((primes, isPrime, i) => {
+        if (isPrime && i > 1) {
+          primes.push(i)
+        }
+        return primes
+      }, [])
+    }
+
+    // utility
+    function isPositiveInteger(v) {
+      var i;
+      return v && (i = parseInt(v)) && i > 0 && (i === v || ''+i === v);
+    }
+
+  </script>
+
+</body>
+</html>
