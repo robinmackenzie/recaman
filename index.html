@@ -28,6 +28,7 @@
           <option>interpolateWarm</option>
           <option>interpolateCool</option>
           <option>interpolateRainbow</option>
+          <option>interpolateSinebow</option>
         </select>    
       </label>
       <label>
@@ -80,9 +81,10 @@
     function runRecaman(options) {
 
       let a = recaman(options["iterations"]);
-      console.log(`Computed Recamán sequence for ${options["iterations"]} iterations`);
       let a_max = Math.max(...a);
       let p = eratosthenes(a_max);
+      // debug inputs
+      console.log(`Computed Recamán sequence for ${options["iterations"]} iterations`);
       console.log(`Computed primes upto ${a_max}`);
 
       // append svg
