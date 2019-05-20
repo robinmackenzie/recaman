@@ -41,4 +41,8 @@ To do features:
 * Show where the arc hits a number from another sequence e.g. Fibonacci
 * Colorise based on something other than iteration index
 * Highlight an arc and see the generating items of the sequence
+* Investigate 'un-fixing' the x-axis when panning on y-axis
+
+## Demo
+https://robinmackenzie.github.io/recaman/
 
