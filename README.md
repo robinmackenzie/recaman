@@ -11,6 +11,16 @@ Useful links:
 * [Wolfram](http://mathworld.wolfram.com/RecamansSequence.html)
 * [p5.js implementation as an online coding challenge](https://www.youtube.com/watch?v=DhFZfzOvNTU)
 
+## Demo
+https://robinmackenzie.github.io/recaman/
+
+Here is an example with 66 iterations of the sequence with primes highlighted. The prime highlight colors an arc red where the destination index is prime.
+
+![](recaman1.png)
+
+Here is an example with 400 iterations of the sequence using D3's interpolateWarm scale. The visualisation has been panned and zoomed to show detail around indices 30-150.
+
+![](recaman2.PNG)
 
 ## Javascript implementation
 ```javascript
@@ -43,6 +53,5 @@ To do features:
 * Highlight an arc and see the generating items of the sequence
 * Investigate 'un-fixing' the x-axis when panning on y-axis
 
-## Demo
-https://robinmackenzie.github.io/recaman/
+
 
